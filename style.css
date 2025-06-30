@@ -1,0 +1,295 @@
+/* style.css */
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap');
+
+:root {
+    --container-bg: rgba(35, 35, 40, 0.9);
+    --sidebar-bg: rgba(25, 25, 30, 0.9);
+    --text-color: #f0f0f0;
+    --primary-color: #e5e5e5;
+    --border-color: rgba(255, 255, 255, 0.1);
+    --input-bg: rgba(0, 0, 0, 0.3);
+    --item-hover-bg: rgba(75, 75, 80, 0.8);
+    --nav-item-hover-bg: rgba(55, 55, 60, 0.9);
+    --nav-item-active-bg: #536dfe;
+    --completed-opacity: 0.5;
+    --completed-text: #999;
+    --delete-color: #ff5252;
+    --complete-color: #00e676;
+    --btn-close: #ff605c;
+    --btn-minimize: #ffbd44;
+    --btn-maximize: #00ca4e;
+    --calendar-today-bg: #536dfe;
+    /* Priority Background Colors */
+    --priority-p3-bg: rgba(255, 23, 68, 0.3); /* High */
+    --priority-p2-bg: rgba(255, 82, 82, 0.2);  /* Medium */
+    --priority-p1-bg: rgba(255, 138, 128, 0.15); /* Low */
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+    font-family: 'JetBrains Mono', monospace;
+    background-color: transparent;
+    color: var(--text-color);
+    overflow: hidden; /* Ngăn cuộn toàn bộ trang */
+}
+
+.container {
+    backdrop-filter: blur(30px) saturate(180%);
+    -webkit-backdrop-filter: blur(30px) saturate(180%);
+    background-color: var(--container-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 14px;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3);
+    width: 100vw;
+    height: 100vh;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.window-controls {
+    position: absolute; top: 15px; left: 15px;
+    display: flex; -webkit-app-region: no-drag;
+    z-index: 10;
+}
+.control-btn {
+    height: 12px; width: 12px; border-radius: 50%;
+    margin-right: 8px; border: 1px solid rgba(0,0,0,0.2);
+    cursor: pointer; display: flex; align-items: center;
+    justify-content: center; transition: transform 0.2s;
+}
+.control-btn:hover { transform: scale(1.1); }
+.control-btn.close { background-color: var(--btn-close); }
+.control-btn.minimize { background-color: var(--btn-minimize); }
+.control-btn.maximize { background-color: var(--btn-maximize); }
+.control-btn > i {
+    font-family: 'Helvetica Neue', sans-serif; font-style: normal;
+    font-weight: bold; font-size: 9px; line-height: 12px;
+    color: rgba(0,0,0,0.6); opacity: 0;
+    transition: opacity 0.15s ease-in-out;
+}
+.window-controls:hover .control-btn > i { opacity: 1; }
+
+.app-layout {
+    display: flex;
+    width: 100%;
+    height: 100%;
+    -webkit-app-region: drag;
+}
+
+/* Sidebar */
+.sidebar {
+    width: 240px;
+    flex-shrink: 0;
+    background-color: var(--sidebar-bg);
+    padding: 20px;
+    padding-top: 50px; /* Space for window controls */
+    display: flex;
+    flex-direction: column;
+    -webkit-app-region: no-drag;
+}
+.sidebar-header h2 {
+    font-size: 1.5em;
+    padding-bottom: 20px;
+    margin-bottom: 20px;
+    border-bottom: 1px solid var(--border-color);
+}
+.sidebar-nav {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+.nav-item {
+    background: none;
+    border: none;
+    color: var(--text-color);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 1.1em;
+    text-align: left;
+    padding: 12px 15px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+.nav-item:hover {
+    background-color: var(--nav-item-hover-bg);
+}
+.nav-item.active {
+    background-color: var(--nav-item-active-bg);
+    color: white;
+    font-weight: bold;
+}
+
+/* Main Content */
+.main-content {
+    flex-grow: 1;
+    padding: 25px 30px;
+    padding-top: 50px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden; /* Quan trọng */
+}
+
+.view {
+    display: none; /* Ẩn các view theo mặc định */
+    flex-direction: column;
+    height: 100%;
+    width: 100%;
+}
+.view.active {
+    display: flex; /* Hiển thị view đang active */
+}
+.view-header {
+    margin-bottom: 25px;
+    flex-shrink: 0;
+}
+.view-header h1 {
+    font-size: 2em;
+    color: var(--primary-color);
+}
+
+.input-area, #todo-list, button { -webkit-app-region: no-drag; }
+.input-area { display: flex; gap: 15px; margin-bottom: 25px; flex-shrink: 0; }
+
+#todo-input {
+    flex-grow: 1; padding: 14px 18px;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    font-size: 1.1em; outline: none;
+    background-color: var(--input-bg);
+    color: var(--text-color);
+    transition: border-color 0.3s;
+}
+#todo-input:focus { border-color: var(--nav-item-active-bg); }
+
+#due-date-input, #priority-input {
+    background-color: var(--input-bg);
+    border: 1px solid var(--border-color);
+    color: var(--text-color);
+    padding: 14px; outline: none;
+    border-radius: 8px;
+}
+#due-date-input::-webkit-calendar-picker-indicator { filter: invert(1); cursor: pointer; }
+
+#todo-list {
+    list-style-type: none;
+    overflow-y: auto; /* Chỉ cuộn danh sách này */
+    flex-grow: 1; /* Lấp đầy không gian còn lại */
+    padding-right: 10px;
+}
+#todo-list li {
+    padding: 15px 20px; display: flex;
+    align-items: center;
+    transition: background-color 0.3s, opacity 0.3s;
+    border-radius: 10px; margin-bottom: 12px;
+}
+#todo-list li.priority-p1 { background-color: var(--priority-p1-bg); }
+#todo-list li.priority-p2 { background-color: var(--priority-p2-bg); }
+#todo-list li.priority-p3 { background-color: var(--priority-p3-bg); }
+#todo-list li:hover { background-color: var(--item-hover-bg); }
+
+.task-content { display: flex; flex-direction: column; margin-right: 15px; flex-grow: 1; }
+.task-text { outline: none; font-size: 1.1em; cursor: pointer; }
+.task-text[contenteditable="true"] { border-bottom: 1px dashed var(--edit-color); cursor: text; }
+.due-date { font-size: 0.85em; color: #aaa; margin-top: 5px; }
+#todo-list li.completed { opacity: var(--completed-opacity); }
+#todo-list li.completed .task-text, #todo-list li.completed .due-date {
+    text-decoration: line-through;
+    color: var(--completed-text);
+}
+
+.buttons-container { display: flex; align-items: center; }
+.action-btn {
+    background-color: transparent; border: none; padding: 8px;
+    border-radius: 50%; width: 36px; height: 36px;
+    cursor: pointer; margin-left: 8px;
+    font-size: 1.1em; transition: background-color 0.2s;
+}
+.action-btn:hover { background-color: rgba(255,255,255,0.1); }
+.complete-btn { color: var(--complete-color); }
+.delete-btn { color: var(--delete-color); }
+
+/* Calendar Styles */
+.calendar-header {
+    display: flex; justify-content: space-between; align-items: center;
+}
+.calendar-header h2 { font-size: 1.6em; }
+.calendar-header button {
+    background: none; border: none; color: var(--primary-color);
+    font-size: 2em; cursor: pointer; -webkit-app-region: no-drag;
+}
+.weekly-calendar-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 10px;
+    flex-grow: 1; /* Lấp đầy không gian còn lại */
+    overflow: hidden; /* Quan trọng */
+}
+.day-column {
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    background-color: rgba(0,0,0,0.15);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+.day-header {
+    padding: 10px;
+    font-weight: bold;
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-shrink: 0;
+}
+.day-number {
+    font-size: 1.1em;
+    padding: 3px 7px;
+    border-radius: 50%;
+}
+.day-number.today {
+    background-color: var(--calendar-today-bg);
+    color: #fff;
+}
+.calendar-tasks {
+    flex-grow: 1;
+    overflow-y: auto; /* Chỉ cuộn khu vực task trong ngày */
+    padding: 10px;
+}
+.calendar-task {
+    font-size: 0.95em;
+    padding: 10px 12px;
+    border-radius: 8px;
+    margin-bottom: 10px;
+    white-space: normal;
+    word-wrap: break-word;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    text-align: left;
+    color: var(--text-color);
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.calendar-task:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+}
+.calendar-task.priority-p1 { background-color: var(--priority-p1-bg); }
+.calendar-task.priority-p2 { background-color: var(--priority-p2-bg); }
+.calendar-task.priority-p3 { background-color: var(--priority-p3-bg); }
+
+/* Scrollbars */
+#todo-list::-webkit-scrollbar, .calendar-tasks::-webkit-scrollbar { width: 6px; }
+#todo-list::-webkit-scrollbar-track, .calendar-tasks::-webkit-scrollbar-track { background: transparent; }
+#todo-list::-webkit-scrollbar-thumb, .calendar-tasks::-webkit-scrollbar-thumb {
+    background-color: rgba(255, 255, 255, 0.2);
+    border-radius: 3px;
+}
+#todo-list::-webkit-scrollbar-thumb:hover, .calendar-tasks::-webkit-scrollbar-thumb:hover {
+    background-color: rgba(255, 255, 255, 0.4);
+}

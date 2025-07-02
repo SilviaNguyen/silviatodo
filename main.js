@@ -4,16 +4,49 @@ const { app, BrowserWindow, Menu, ipcMain } = require('electron');
 const path = require('path');
 const Store = require('electron-store');
 
-// Khởi tạo store ở phạm vi toàn cục để lưu trạng thái cửa sổ
 const store = new Store();
 
+// Biến toàn cục để giữ tham chiếu đến cửa sổ chính
+let mainWindow;
+
+// --- BẮT ĐẦU: Logic đảm bảo chỉ một phiên bản ứng dụng được chạy ---
+
+// Yêu cầu một khóa (lock) để đảm bảo chỉ một instance
+const gotTheLock = app.requestSingleInstanceLock();
+
+if (!gotTheLock) {
+    // Nếu không nhận được khóa, nghĩa là đã có một instance khác đang chạy -> thoát instance này.
+    app.quit();
+} else {
+    // Nếu nhận được khóa, đây là instance đầu tiên.
+    // Lắng nghe sự kiện khi một instance thứ hai được khởi chạy.
+    app.on('second-instance', (event, commandLine, workingDirectory) => {
+        // Ai đó đã cố gắng chạy một instance thứ hai, chúng ta nên focus vào cửa sổ của mình.
+        if (mainWindow) {
+            if (mainWindow.isMinimized()) mainWindow.restore();
+            mainWindow.focus();
+        }
+    });
+
+    // Tạo cửa sổ chính khi ứng dụng đã sẵn sàng (chỉ cho instance đầu tiên).
+    app.whenReady().then(() => {
+        createWindow();
+
+        app.on('activate', function () {
+            if (BrowserWindow.getAllWindows().length === 0) createWindow();
+        });
+    });
+}
+
+// --- KẾT THÚC: Logic đảm bảo chỉ một phiên bản ứng dụng được chạy ---
+
+
 function createWindow() {
-    // Lấy trạng thái cửa sổ đã lưu, nếu không có thì dùng giá trị mặc định
     const savedBounds = store.get('windowBounds', { width: 1380, height: 980 });
     const isMaximized = store.get('isMaximized', false);
 
-    const mainWindow = new BrowserWindow({
-        ...savedBounds, // Áp dụng kích thước và vị trí đã lưu
+    mainWindow = new BrowserWindow({ // Gán vào biến toàn cục
+        ...savedBounds,
         minWidth: 800,
         minHeight: 600,
         transparent: true,
@@ -23,12 +56,11 @@ function createWindow() {
             contextIsolation: false,
         },
         icon: path.join(__dirname, 'build/icon.ico'),
-        show: false // Bắt đầu ở trạng thái ẩn để tránh hiện tượng giật màn hình
+        show: false
     });
 
     mainWindow.loadFile('index.html');
 
-    // Chỉ hiển thị cửa sổ khi nội dung đã sẵn sàng để tải
     mainWindow.once('ready-to-show', () => {
         if (isMaximized) {
             mainWindow.maximize();
@@ -39,38 +71,45 @@ function createWindow() {
 
     Menu.setApplicationMenu(null);
 
-    // Lưu trạng thái cửa sổ trước khi đóng ứng dụng
+    // Lưu trạng thái cửa sổ
     mainWindow.on('close', () => {
-        const bounds = mainWindow.getBounds();
-        store.set('windowBounds', bounds);
-        store.set('isMaximized', mainWindow.isMaximized());
+        try {
+            if (!mainWindow.isMaximized()) {
+                const bounds = mainWindow.getBounds();
+                store.set('windowBounds', bounds);
+            }
+            store.set('isMaximized', mainWindow.isMaximized());
+        } catch (error) {
+            console.error('Failed to save window state:', error);
+        }
     });
 
-    // Các hàm điều khiển cửa sổ
-    ipcMain.on('minimize-app', () => {
-        mainWindow.minimize();
+    // Đảm bảo biến mainWindow được giải phóng khi cửa sổ đóng
+    mainWindow.on('closed', () => {
+        mainWindow = null;
     });
+}
 
-    ipcMain.on('maximize-app', () => {
+
+// Các hàm điều khiển cửa sổ
+ipcMain.on('minimize-app', () => {
+    if (mainWindow) mainWindow.minimize();
+});
+
+ipcMain.on('maximize-app', () => {
+    if (mainWindow) {
         if (mainWindow.isMaximized()) {
             mainWindow.unmaximize();
         } else {
             mainWindow.maximize();
         }
-    });
-
-    ipcMain.on('close-app', () => {
-        mainWindow.close();
-    });
-}
-
-app.whenReady().then(() => {
-    createWindow();
-
-    app.on('activate', function () {
-        if (BrowserWindow.getAllWindows().length === 0) createWindow();
-    });
+    }
 });
+
+ipcMain.on('close-app', () => {
+    if (mainWindow) mainWindow.close();
+});
+
 
 app.on('window-all-closed', function () {
     if (process.platform !== 'darwin') {

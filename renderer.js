@@ -10,23 +10,21 @@ window.addEventListener('DOMContentLoaded', () => {
     const minimizeBtn = document.getElementById('minimize-btn');
     const maximizeBtn = document.getElementById('maximize-btn');
 
-    // Navigation
+    // Navigation elements
     const navListViewBtn = document.getElementById('nav-list-view');
     const navCalendarViewBtn = document.getElementById('nav-calendar-view');
-    const allNavItems = document.querySelectorAll('.nav-item');
 
-    // Views
     const listView = document.getElementById('list-view');
     const calendarView = document.getElementById('calendar-view');
-    const allViews = document.querySelectorAll('.view');
 
-    // List View Elements
     const todoInput = document.getElementById('todo-input');
     const dueDateInput = document.getElementById('due-date-input');
     const priorityInput = document.getElementById('priority-input');
     const todoList = document.getElementById('todo-list');
 
-    // Calendar View Elements
+    // LẤY NÚT THÊM MỚI
+    const addTodoBtn = document.getElementById('add-todo-btn');
+
     const weekRangeHeader = document.getElementById('week-range-header');
     const weeklyGrid = document.getElementById('weekly-calendar-grid');
     const prevWeekBtn = document.getElementById('prev-week-btn');
@@ -54,7 +52,7 @@ window.addEventListener('DOMContentLoaded', () => {
             }
         });
         store.set('todos', todos);
-        renderWeeklyCalendar();
+        renderWeeklyCalendar(); // Cập nhật lịch mỗi khi lưu
     };
 
     // --- UI Rendering ---
@@ -76,8 +74,12 @@ window.addEventListener('DOMContentLoaded', () => {
         if (todo.dueDate) {
             const dueDateSpan = document.createElement('span');
             dueDateSpan.classList.add('due-date');
-            const [year, month, day] = todo.dueDate.split('-');
-            dueDateSpan.textContent = `Hạn: ${day}/${month}/${year}`;
+            try {
+                const [year, month, day] = todo.dueDate.split('-');
+                dueDateSpan.textContent = `Due: ${day}/${month}/${year}`;
+            } catch (e) {
+                dueDateSpan.textContent = `Due: Invalid Date`;
+            }
             taskContent.appendChild(dueDateSpan);
         }
         li.appendChild(taskContent);
@@ -88,13 +90,13 @@ window.addEventListener('DOMContentLoaded', () => {
         const completeBtn = document.createElement('button');
         completeBtn.innerHTML = '<i class="fas fa-check"></i>';
         completeBtn.classList.add('action-btn', 'complete-btn');
-        completeBtn.title = 'Hoàn thành';
+        completeBtn.title = 'Complete';
         buttonsContainer.appendChild(completeBtn);
 
         const deleteBtn = document.createElement('button');
         deleteBtn.innerHTML = '<i class="fas fa-trash-alt"></i>';
         deleteBtn.classList.add('action-btn', 'delete-btn');
-        deleteBtn.title = 'Xóa';
+        deleteBtn.title = 'Delete';
         buttonsContainer.appendChild(deleteBtn);
 
         li.appendChild(buttonsContainer);
@@ -104,6 +106,10 @@ window.addEventListener('DOMContentLoaded', () => {
     const loadTodos = () => {
         todoList.innerHTML = '';
         const todos = store.get('todos') || [];
+
+        // Sắp xếp: công việc chưa hoàn thành (false=0) lên trước, đã hoàn thành (true=1) xuống dưới
+        todos.sort((a, b) => a.completed - b.completed);
+
         todos.forEach(todo => {
             const todoElement = createTodoElement(todo);
             todoList.appendChild(todoElement);
@@ -120,7 +126,7 @@ window.addEventListener('DOMContentLoaded', () => {
         const end = week[6];
         weekRangeHeader.textContent = `${start.getDate()} ${start.toLocaleString('en-us', { month: 'short' })} - ${end.getDate()} ${end.toLocaleString('en-us', { month: 'short' })}, ${end.getFullYear()}`;
 
-        const dayNames = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
+        const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
         week.forEach((day, index) => {
             const dayColumn = document.createElement('div');
@@ -140,17 +146,10 @@ window.addEventListener('DOMContentLoaded', () => {
             const dateStr = `${day.getFullYear()}-${String(day.getMonth() + 1).padStart(2, '0')}-${String(day.getDate()).padStart(2, '0')}`;
             const tasksForDay = todos.filter(t => t.dueDate === dateStr && !t.completed);
 
-            tasksForDay.sort((a, b) => (b.priority || 'p2').localeCompare(a.priority || 'p2'));
-
             tasksForDay.forEach(task => {
                 const taskElement = document.createElement('div');
-                taskElement.classList.add('calendar-task', `priority-${task.priority || 'p2'}`);
-
-                const taskText = document.createElement('span');
-                taskText.classList.add('calendar-task-text');
-                taskText.textContent = task.text;
-
-                taskElement.appendChild(taskText);
+                taskElement.classList.add('calendar-task', `priority-${task.priority}`);
+                taskElement.textContent = task.text;
                 tasksContainer.appendChild(taskElement);
             });
 
@@ -190,11 +189,12 @@ window.addEventListener('DOMContentLoaded', () => {
                 priority: priorityInput.value
             };
             const todoElement = createTodoElement(newTodo);
-            todoList.appendChild(todoElement);
+            todoList.prepend(todoElement); // Thêm vào đầu danh sách
             todoInput.value = '';
             dueDateInput.value = '';
             priorityInput.value = 'p2';
             saveTodos();
+            loadTodos(); // Tải lại để đảm bảo thứ tự đúng
         }
     };
 
@@ -208,7 +208,14 @@ window.addEventListener('DOMContentLoaded', () => {
             target.focus();
             target.addEventListener('blur', () => {
                 target.contentEditable = 'false';
-                saveTodos();
+                // Cập nhật text trong store
+                const todoId = listItem.dataset.id;
+                const todos = store.get('todos') || [];
+                const todoToUpdate = todos.find(t => t.id === todoId);
+                if (todoToUpdate) {
+                    todoToUpdate.text = target.textContent;
+                    store.set('todos', todos);
+                }
             }, { once: true });
             target.addEventListener('keydown', (e) => {
                 if (e.key === 'Enter') {
@@ -216,33 +223,46 @@ window.addEventListener('DOMContentLoaded', () => {
                     target.blur();
                 }
             });
+            return;
         }
 
         const actionBtn = target.closest('.action-btn');
         if (!actionBtn) return;
 
+        let needsResort = false;
+
         if (actionBtn.classList.contains('complete-btn')) {
             listItem.classList.toggle('completed');
+            needsResort = true;
         } else if (actionBtn.classList.contains('delete-btn')) {
             listItem.remove();
         }
 
         saveTodos();
+
+        if (needsResort) {
+            loadTodos(); // Tải lại để sắp xếp
+        }
     };
 
-    // Navigation Logic
-    const switchView = (viewToShow, navItemToActivate) => {
-        allViews.forEach(v => v.classList.remove('active'));
-        allNavItems.forEach(n => n.classList.remove('active'));
-
-        viewToShow.classList.add('active');
-        navItemToActivate.classList.add('active');
+    const switchView = (viewToShow) => {
+        if (viewToShow === 'list') {
+            listView.classList.add('active');
+            calendarView.classList.remove('active');
+            navListViewBtn.classList.add('active');
+            navCalendarViewBtn.classList.remove('active');
+        } else {
+            listView.classList.remove('active');
+            calendarView.classList.add('active');
+            navListViewBtn.classList.remove('active');
+            navCalendarViewBtn.classList.add('active');
+            renderWeeklyCalendar();
+        }
     };
 
-    navListViewBtn.addEventListener('click', () => switchView(listView, navListViewBtn));
-    navCalendarViewBtn.addEventListener('click', () => switchView(calendarView, navCalendarViewBtn));
+    navListViewBtn.addEventListener('click', () => switchView('list'));
+    navCalendarViewBtn.addEventListener('click', () => switchView('calendar'));
 
-    // Calendar navigation
     prevWeekBtn.addEventListener('click', () => {
         currentDate.setDate(currentDate.getDate() - 7);
         renderWeeklyCalendar();
@@ -254,7 +274,9 @@ window.addEventListener('DOMContentLoaded', () => {
     });
 
     // --- Initialization ---
-    todoInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') addTodo(); });
+    // THÊM SỰ KIỆN CLICK CHO NÚT MỚI
+    addTodoBtn.addEventListener('click', addTodo);
+    todoInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') addTodo(); });
     todoList.addEventListener('click', handleListClick);
 
     loadTodos();

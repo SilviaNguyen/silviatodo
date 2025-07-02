@@ -1,0 +1,40 @@
+# Lịch sử và cache của hệ điều hành
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Thư mục chứa các gói phụ thuộc
+# Thư mục này sẽ được tạo lại khi chạy `npm install`
+/node_modules/
+
+# Thư mục chứa sản phẩm build của electron-builder
+# Các tệp này được tạo ra khi bạn chạy `npm run dist`
+/dist/
+
+# Các tệp log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Thư mục cấu hình của IDE
+.idea/
+.vscode/
+
+# Các tệp tạm của trình đóng gói
+*.p12
+*.crl
+*.key
+*.pem
+*.csr
+*.srl
+*.zip
+*.7z
+*.dmg
+*.exe
+*.pkg
+*.nsis
+*.nupkg
